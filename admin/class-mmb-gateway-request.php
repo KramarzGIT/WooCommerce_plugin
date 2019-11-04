@@ -146,6 +146,9 @@ class MMB_Gateway_Request
         //         }
         $paymentSolutionId = ''; 
         $shop_page_url = get_permalink( wc_get_page_id( 'shop' ) );
+        if(empty($shop_page_url)){
+            $shop_page_url = site_url();
+        }
         return array(
             'merchantId' => $this->gateway->api_merchant_id,
             'password' => $this->gateway->api_password,
@@ -253,7 +256,7 @@ class MMB_Gateway_Request
 
             update_post_meta($order->get_id(), '_mmb_gateway_message', $mmb_message);
         }
-
+        $order_id = $order->get_id();
         if (!isset($mmb_message)) {
             //Auth transaction
             if($mmb_check_request_data->status == "NOT_SET_FOR_CAPTURE"){
@@ -269,7 +272,7 @@ class MMB_Gateway_Request
             //save the EVO transaction ID into the database
             update_post_meta( $order->get_id(), '_transaction_id', $merchantTxId );
 
-            $order_id = $order->get_id();
+            
 
             // Reduce stock levels
             wc_reduce_stock_levels($order_id);
