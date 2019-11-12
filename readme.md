@@ -1,4 +1,4 @@
-
+![Version](https://img.shields.io/badge/version-1.1.0-informational)
 
 This plugin is provided for BOIPA merchants using WooCommerce.
 
