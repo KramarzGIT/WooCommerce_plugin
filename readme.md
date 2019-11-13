@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.1.0-informational)
+[![GitHub license](https://img.shields.io/github/license/UniversalPay/prestashop_beta)](https://github.com/UniversalPay/prestashop_beta/blob/master/LICENSE)![Version](https://img.shields.io/badge/version-1.1.0-informational)
 
 This plugin is provided for BOIPA merchants using WooCommerce.
 
