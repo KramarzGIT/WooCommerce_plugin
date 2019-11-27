@@ -134,7 +134,7 @@ if($integration_show_iframe || $integration_show_redirect || $integration_show_h
 if($show_auth_fields){
     //Purchase or Auth
     $admin_fields_array['api_payment_action'] = array(
-        'title' => __('Payment mode', 'mmb-gateway-woocommerce'),
+        'title' => __('Payment action', 'mmb-gateway-woocommerce'),
         'type' => 'select',
         'description' => '',
         'desc_tip' => false,
