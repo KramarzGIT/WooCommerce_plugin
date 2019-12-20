@@ -74,7 +74,7 @@ class BOIPA extends WC_Payment_Gateway {
 
         $this->title = $this->get_option('title');
         $this->description = $this->get_option('description');
-        $this->testmode = 'yes' === $this->get_option('testmode', 'no');		
+        $this->testmode = 'yes' === $this->get_option('testmode', 'no');
         $this->icon = apply_filters( 'mmb-gateway-woocommerce', plugin_dir_url(__FILE__).'assets/images/logo.png');
 
         $this->api_merchant_id = $this->get_option('api_merchant_id');
@@ -96,11 +96,11 @@ class BOIPA extends WC_Payment_Gateway {
         $show_url_fields_sandbox = '0';
         $show_url_fields_live = '0';
         //Define the $integration_modes,specifies whether integration mode should be shown or not, 1 means to show, 0 means not
-        
+
         $integration_show_iframe = '1';
         $integration_show_redirect = '1';
         $integration_show_hostedpay = '1';
-        
+
         /*
          * The index of the mode:
          * iframe:0
@@ -117,13 +117,13 @@ class BOIPA extends WC_Payment_Gateway {
         $api_payments_url = 'https://api.boipapaymentgateway.com/payments';
         $api_js_url = 'https://cashierui-api.boipapaymentgateway.com/js/api.js';
         $api_cashier_url = 'https://cashierui-api.boipapaymentgateway.com/ui/cashier';
-        
+
         if($integration_show_iframe || $integration_show_redirect || $integration_show_hostedpay){
             $this->api_payment_modes = $this->get_option('api_payment_modes');
         }else{
             $this->api_payment_modes = $default_integration_mode;
         }
-        
+
 
         //URLs
         if($show_url_fields_sandbox){
@@ -137,7 +137,7 @@ class BOIPA extends WC_Payment_Gateway {
             $this->api_test_js_url = $api_test_js_url;
             $this->api_test_cashier_url = $api_test_cashier_url;
         }
-        
+
         if($show_url_fields_live){
             $this->api_token_url = $this->get_option('api_token_url');
             $this->api_payments_url = $this->get_option('api_payments_url');
@@ -149,7 +149,7 @@ class BOIPA extends WC_Payment_Gateway {
             $this->api_js_url = $api_js_url;
             $this->api_cashier_url = $api_cashier_url;
         }
-        
+
 
         //Load Settings
         $this->init_form_fields();
@@ -159,7 +159,7 @@ class BOIPA extends WC_Payment_Gateway {
         if (!$this->is_valid_for_use()) {
             $this->enabled = false;
         }
-        
+
         // define support for refunds
         $this->supports = array(
             'refunds'
@@ -175,7 +175,7 @@ class BOIPA extends WC_Payment_Gateway {
     }
 
     /**
-     * Logging method
+     * NOT IN USE :Logging method
      *
      * @since    1.0.0
      * @param    string $message
@@ -188,7 +188,12 @@ class BOIPA extends WC_Payment_Gateway {
             self::$log->add('mmb', $message);
         }
     }
-
+    public function logging($message){
+        if('yes' === $this->get_option('log_mode', 'no')){
+            $logger = new WC_Logger();
+            $logger->add("$this->id", $message);
+        }
+    }
     /**
      * Check if the currency of store is accepted by BOIPA
      *
@@ -293,7 +298,7 @@ class BOIPA extends WC_Payment_Gateway {
             }
         }
     }
-    
+
     /**
      * Redirect page to MMB.
      *
@@ -347,7 +352,7 @@ class BOIPA extends WC_Payment_Gateway {
 
         return $mmb_request->get_available_payment_solutions($this->testmode);
     }
-    
+
     //customize admin order detail page to show EVO transaction ID
     public function show_evo_transaction_id($order){
         $transaction_id = get_post_meta( $order->get_id(), '_transaction_id', true );
@@ -356,7 +361,7 @@ class BOIPA extends WC_Payment_Gateway {
             echo "<p>$transaction_id</p>";
         }
     }
-    
+
     //the method to process refund
     public function process_refund( $order_id, $amount = null, $reason = ''){
         $order = wc_get_order($order_id);
@@ -379,24 +384,24 @@ class BOIPA extends WC_Payment_Gateway {
         } else {
             return __( 'Bad identifier.', 'mmb-gateway-woocommerce' );
         }
-        
+
         $raw_post = file_get_contents( 'php://input' );
         $parts = parse_url($raw_post);
         parse_str($parts['path'], $query);
-        
+        $this->logging('Gateway callback: Order ID :'.$order_id.' .POST: '.json_encode($query));
         if ( isset($query['merchantTxId']) ) {
             $merchantTxId = $query['merchantTxId'];
         } else {
             return __( 'Bad identifier.', 'mmb-gateway-woocommerce' );
         }
-        
+
         //the server will also call back the notification when  refund are made, this is to ignore the other action, only purchase
         if($query['action'] != 'PURCHASE' && $query['action'] != 'AUTH'){
             return __( 'Bad identifier.', 'mmb-gateway-woocommerce' );
         }
-        
+
         include_once('class-mmb-gateway-request.php');
-        
+
         $order = wc_get_order($order_id);
         $mmb_request = new MMB_Gateway_Request($this);
         $mmb_request->generate_check_request_form($order, $merchantTxId, $this->testmode);
@@ -424,10 +429,10 @@ class BOIPA extends WC_Payment_Gateway {
         if ( ! is_object( $order ) ) {
             $order = wc_get_order( $order );
         }
-        
+
         $order_id = version_compare( WC_VERSION, '3.0', '<' ) ? $order->id : $order->get_id();
         $this->capture_payment( $order_id );
-        
+
         return true;
     }
     // add a drop down option of Capture Online button for the Order actions area
@@ -435,25 +440,25 @@ class BOIPA extends WC_Payment_Gateway {
         if ( ! isset( $_REQUEST['post'] ) ) {
             return $actions;
         }
-        
+
         $order = wc_get_order( $_REQUEST['post'] );
-        
+
         $old_wc         = version_compare( WC_VERSION, '3.0', '<' );
         $order_id       = $old_wc ? $order->id : $order->get_id();
         $payment_method = $old_wc ? $order->payment_method : $order->get_payment_method();
         $payment_status  = $old_wc ? get_post_meta( $order_id, '_payment_status', true ) : $order->get_meta( '_payment_status', true );
-        
+
         // exit if the order wasn't paid for with this gateway or the order has paid with Purchase action
         if ( 'boipa' !== $payment_method || 'on-hold' !== $payment_status ) {
             return $actions;
         }
-        
+
         if ( ! is_array( $actions ) ) {
             $actions = array();
         }
-        
+
         $actions['boipa_capture_charge'] = esc_html__( 'Capture Online');
-        
+
         return $actions;
     }
     // add a drop down option of VOID Online button for the Order actions area
@@ -461,25 +466,25 @@ class BOIPA extends WC_Payment_Gateway {
         if ( ! isset( $_REQUEST['post'] ) ) {
             return $actions;
         }
-        
+
         $order = wc_get_order( $_REQUEST['post'] );
-        
+
         $old_wc         = version_compare( WC_VERSION, '3.0', '<' );
         $order_id       = $old_wc ? $order->id : $order->get_id();
         $payment_method = $old_wc ? $order->payment_method : $order->get_payment_method();
         $payment_status  = $old_wc ? get_post_meta( $order_id, '_payment_status', true ) : $order->get_meta( '_payment_status', true );
-        
+
         // exit if the order wasn't paid for with this gateway or the order has paid with Purchase action
         if ( 'boipa' !== $payment_method || 'on-hold' !== $payment_status ) {
             return $actions;
         }
-        
+
         if ( ! is_array( $actions ) ) {
             $actions = array();
         }
-        
+
         $actions['boipa_void_charge'] = esc_html__( 'VOID Online');
-        
+
         return $actions;
     }
     /**
@@ -504,10 +509,10 @@ class BOIPA extends WC_Payment_Gateway {
         if ( ! is_object( $order ) ) {
             $order = wc_get_order( $order );
         }
-        
+
         $order_id = version_compare( WC_VERSION, '3.0', '<' ) ? $order->id : $order->get_id();
         $this->cancel_payment( $order_id );
-        
+
         return true;
     }
 }

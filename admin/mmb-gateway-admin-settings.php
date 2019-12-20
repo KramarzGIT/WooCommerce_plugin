@@ -13,6 +13,8 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+/*Define the control parameter value to determine whether the LOG functionality show or not */
+$show_log_field = '1';
 /*Define the control parameter value to determine whether the AUTH functionality show or not */
 $show_auth_fields = '1';
 /*Define the control parameter value to determine whether the UI fields show or not */
@@ -39,7 +41,7 @@ $api_cashier_url = 'https://cashierui-api.boipapaymentgateway.com/ui/cashier';
  * redirect:1
  * hostedpay: 2
  */
-//specifies the default index of integration mode 
+//specifies the default index of integration mode
 $default_integration_mode = '0';
 // $brand = 'BOIPA';
 
@@ -222,7 +224,16 @@ if($show_url_fields_live){
         'default' => $api_cashier_url
     );
 }
-
+if($show_log_field){
+    $admin_fields_array['log_mode'] =  array(
+        'title' => __('Logging', 'mmb-gateway-woocommerce'),
+        'type' => 'checkbox',
+        'label' => __('Enable Log Debug', 'mmb-gateway-woocommerce'),
+        'description' => __('Log payment events, such as gateway transaction callback, if enabled, log file will be found inside: wp-content/uploads/wc-logs', 'mmb-gateway-woocommerce'),
+        'desc_tip' => false,
+        'default' => 'no'
+    );
+}
 
 
 return $admin_fields_array;
