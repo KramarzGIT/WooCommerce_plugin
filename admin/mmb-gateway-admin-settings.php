@@ -41,7 +41,7 @@ $api_cashier_url = 'https://cashierui-api.boipapaymentgateway.com/ui/cashier';
  * redirect:1
  * hostedpay: 2
  */
-//specifies the default index of integration mode
+//specifies the default index of integration mode 
 $default_integration_mode = '0';
 // $brand = 'BOIPA';
 
