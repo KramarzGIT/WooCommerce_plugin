@@ -291,7 +291,7 @@ class BOIPA extends WC_Payment_Gateway {
                     $message = $mmb_message['message'];
                     $message_type = $mmb_message['message_type'];
 
-                    delete_post_meta($order_id, '_mmb_gateway_message');
+//                     delete_post_meta($order_id, '_mmb_gateway_message');
 
                     wc_add_notice($message, $message_type);
                 }
@@ -337,7 +337,7 @@ class BOIPA extends WC_Payment_Gateway {
             include_once('class-mmb-gateway-request.php');
 
             $this->enqueue_styles();
-
+            sleep(1.5); //the wordpress system has a cache system, sometimes the query will not call DB directly, this is to delay the calling
             $order = wc_get_order($order_id);
             $mmb_request = new MMB_Gateway_Request($this);
             echo $mmb_request->generate_check_request_form($order, $merchantTxId, $this->testmode);

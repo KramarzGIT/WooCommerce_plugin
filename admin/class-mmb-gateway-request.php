@@ -220,63 +220,78 @@ class MMB_Gateway_Request
             return false;
         }
         unset($data);
-        
-        $this->gateway->logging('Check status: Order ID: '.$order->get_id().'. Result:'.$mmb_check_request_data->result);
-        if( $mmb_check_request_data->result !== 'success' ) {
-            $mmb_message = array(
-                'message' =>  __( 'Card payment failed.', 'mmb-gateway-woocommerce' ).__( 'Order ID:', 'mmb-gateway-woocommerce' ) . $order->get_id() . '.'.__( 'Transaction ID:', 'mmb-gateway-woocommerce' ).  $merchantTxId,
-                'message_type' => 'error'
-            );
-            
-            update_post_meta($order->get_id(), '_mmb_gateway_message', $mmb_message);
-        }
-        
-        if ( $mmb_check_request_data->status == "ERROR" || $mmb_check_request_data->status == "DECLINED" || $mmb_check_request_data->status == "INCOMPLETE" ) {
-            $order->update_status( 'failed', sprintf( __( 'Card payment failed.', 'mmb-gateway-woocommerce' ) ) );
-            $mmb_message = array(
-                'message' =>  __( 'Card payment failed.', 'mmb-gateway-woocommerce' ).__( 'Order ID:', 'mmb-gateway-woocommerce' ) . $order->get_id() . '.'.__( 'Transaction ID:', 'mmb-gateway-woocommerce' ).  $merchantTxId,
-                'message_type' => 'error'
-            );
-            
-            update_post_meta($order->get_id(), '_mmb_gateway_message', $mmb_message);
-        }
         $order_id = $order->get_id();
-        if (!isset($mmb_message)) {
-            //Auth transaction
-            if($mmb_check_request_data->status == "NOT_SET_FOR_CAPTURE"){
-                update_post_meta( $order->get_id(), '_payment_status', 'on-hold');
-                $order->update_status( 'on-hold', sprintf( __( 'Card payment authorized.', 'mmb-gateway-woocommerce' ) ) );
-            }else{
-                $order->update_status( 'completed', sprintf( __( 'Card payment completed.', 'mmb-gateway-woocommerce' ) ) );
-                update_post_meta( $order->get_id(), '_payment_status', 'completed');
-                $order->payment_complete();
-                do_action( 'woocommerce_payment_complete', $order_id);
+        if( $mmb_check_request_data->result !== 'success' ) {
+            $order_status = $order->get_status();
+            if($order_status != 'failed'){
+                $order->update_status( 'failed', sprintf( __( 'Card payment failed.', 'mmb-gateway-woocommerce' ) ) );
             }
-            
-            //save the EVO transaction ID into the database
-            update_post_meta( $order->get_id(), '_transaction_id', $merchantTxId );
-            
-            
-            
-            // Reduce stock levels
-            wc_reduce_stock_levels($order_id);
-            
-            // Empty cart
-            if( function_exists('WC') ){
-                WC()->cart->empty_cart();
-            }
-            
-            
-            $message = __('Thank you for shopping with us.<br />Your transaction was successful, payment was received.<br />Your order is currently being processed.', 'mmb-gateway-woocommerce');
-            $message .= '<br />'.__( 'Order ID:', 'mmb-gateway-woocommerce' ).$order->get_id() . '. '.__( 'Transaction ID:', 'mmb-gateway-woocommerce' ) . $merchantTxId;
-            $message_type = 'success';
             $mmb_message = array(
-                'message' => $message,
-                'message_type' => $message_type
+                'message' =>  __( 'Card payment failed.', 'mmb-gateway-woocommerce' ).__( 'Order ID:', 'mmb-gateway-woocommerce' ) . $order->get_id() . '.'.__( 'Transaction ID:', 'mmb-gateway-woocommerce' ).  $merchantTxId,
+                'message_type' => 'error'
             );
+            update_post_meta($order_id, '_mmb_gateway_message', $mmb_message);
+            $order->save();
+            header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK', true, 200);
+            return;
+        }else{
+            
+            if($mmb_check_request_data->status == "NOT_SET_FOR_CAPTURE"){
+                $order_status = $order->get_status();
+                if( $order_status != 'on-hold'){
+                    //Auth transaction
+                    update_post_meta( $order->get_id(), '_payment_status', 'on-hold');
+                    $order->update_status( 'on-hold', sprintf( __( 'Card payment authorized.', 'mmb-gateway-woocommerce' ) ) );
+                    
+                    // Reduce stock levels
+                    wc_reduce_stock_levels($order_id);
+                }
+            }else if($mmb_check_request_data->status == "SET_FOR_CAPTURE" || $mmb_check_request_data->status == "CAPTURED"){
+                $order_status = $order->get_status();
+                if($order_status != 'completed' ){
+                    //Purchase transaction
+                    $order->update_status( 'completed', sprintf( __( 'Card payment completed.', 'mmb-gateway-woocommerce' ) ) );
+                    update_post_meta( $order->get_id(), '_payment_status', 'completed');
+                    $order->payment_complete();
+    //                 do_action( 'woocommerce_payment_complete', $order_id);
+    
+                    // Reduce stock levels
+                    wc_reduce_stock_levels($order_id);
+                }
+            }else{
+                $order_status = $order->get_status();
+                if($order_status != 'failed'){
+                    $order->update_status( 'failed', sprintf( __( 'Card payment failed.', 'mmb-gateway-woocommerce' ) ) );
+                }
+                $mmb_message = array(
+                    'message' =>  __( 'Card payment failed.', 'mmb-gateway-woocommerce' ).__( 'Order ID:', 'mmb-gateway-woocommerce' ) . $order->get_id() . '.'.__( 'Transaction ID:', 'mmb-gateway-woocommerce' ).  $merchantTxId,
+                    'message_type' => 'error'
+                );
+                update_post_meta($order_id, '_mmb_gateway_message', $mmb_message);
+                $order->save();
+                header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK', true, 200);
+                return;
+            }
         }
         
+        
+        // Empty cart
+        if( function_exists('WC') ){
+            WC()->cart->empty_cart();
+        }
+        
+        //save the EVO transaction ID into the database
+        update_post_meta( $order->get_id(), '_transaction_id', $merchantTxId );
+        
+        $message = __('Thank you for shopping with us.<br />Your transaction was successful, payment was received.<br />Your order is currently being processed.', 'mmb-gateway-woocommerce');
+        $message .= '<br />'.__( 'Order ID:', 'mmb-gateway-woocommerce' ).$order->get_id() . '. '.__( 'Transaction ID:', 'mmb-gateway-woocommerce' ) . $merchantTxId;
+        $message_type = 'success';
+        $mmb_message = array(
+            'message' => $message,
+            'message_type' => $message_type
+        );
         update_post_meta($order_id, '_mmb_gateway_message', $mmb_message);
+        $order->save();
         header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK', true, 200);
     }
 
@@ -358,12 +373,16 @@ class MMB_Gateway_Request
         if( $token_request_data->result !== 'success' ) {
             return false; // Bail early
         }
+        $shop_page_url = get_permalink( wc_get_page_id( 'shop' ) );
+        if(empty($shop_page_url)){
+            $shop_page_url = site_url();
+        }
         switch($this->gateway->api_payment_modes){
             //api_payment_modes : array('Iframe','Redirect','HostedPayPage')
             case '0':
                 $mmb_cashier_args = $this->get_mmb_gateway_cashier_args( $order, $sandbox, $token_request_data->token );
                 
-                $mmb_form[] = '<form id="mmbForm" action="'.site_url() . "/?wcapi=boipa&order_id=" . $order->get_id();
+                $mmb_form[] = '<form id="mmbForm" action="'.$shop_page_url . "/?wcapi=boipa&order_id=" . $order->get_id();
                 $mmb_form[] = '" method="post"><input type="hidden" id="merchantTxId" name="merchantTxId" value=""/></form>';
                 $mmb_form[] = '<div id="mmbCashierDiv"></div>';
                 $mmb_form[] = '<script type="text/javascript" src="'. $this->get_api_js($sandbox) . '"></script>';
